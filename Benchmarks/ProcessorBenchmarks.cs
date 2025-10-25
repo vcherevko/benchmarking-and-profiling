@@ -92,4 +92,36 @@ public class ProcessorBenchmarks
 
 		return result;
 	}
+
+	[Benchmark]
+	public async Task<List<string>> ProcessorFasterV3Async()
+	{
+		// Improved version of ProcessorFaster with reading in a streaming way
+		var processor = new ProcessorFasterV3();
+		await processor.InitializeAsync();
+		var result = new List<string>();
+
+		foreach (var stock in processor.Stocks)
+		{
+			result.Add($"{stock.Value.Min} {stock.Value.Max} {stock.Value.Average}");
+		}
+
+		return result;
+	}
+
+	[Benchmark]
+	public async Task<List<string>> ProcessorFasterV3Async2()
+	{
+		// Improved version of ProcessorFaster with reading in a streaming way
+		var processor = new ProcessorFasterV3();
+		await processor.InitializeAsync2();
+		var result = new List<string>();
+
+		foreach (var stock in processor.Stocks)
+		{
+			result.Add($"{stock.Value.Min} {stock.Value.Max} {stock.Value.Average}");
+		}
+
+		return result;
+	}
 }

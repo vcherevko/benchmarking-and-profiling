@@ -1,6 +1,6 @@
 # Benchmark Comparison Analysis
 
-This document compares five implementations measured by BenchmarkDotNet. Each section explains the real changes made and their direct impact on performance and memory usage, with code examples for clarity.
+This document compares several implementations measured by BenchmarkDotNet. Each section explains the real changes made and their direct impact on performance and memory usage, with code examples for clarity.
 
 ## 1. ProcessorOriginal
 - **CSV Parsing:** Used `string.Split(',')` for every line, creating multiple string allocations per row.
@@ -126,9 +126,67 @@ while(reader.ReadLine() is { } line) {
     - Lower StdDev (0.0735s) shows consistent performance
     - No longer allocates memory for entire file content or string arrays from Split()
 
+## 6. ProcessorFasterV3Async
+- **Change:** Uses asynchronous file reading with `StreamReader.ReadLineAsync()` and `await`.
+```csharp
+public async Task InitializeAsync()
+{
+    var dataPath = "./Data";
+    foreach (var file in Directory.GetFiles(dataPath))
+    {
+        using var reader = new StreamReader(File.Open(file, FileMode.Open, FileAccess.Read));
+        await reader.ReadLineAsync(); // skip header line
+        while(await reader.ReadLineAsync() is { } line)
+        {
+            // ...process line as before...
+        }
+    }
+}
+```
+- **Impact:**
+    - Mean: 1.679s (slower than sync V3)
+    - Allocated: 1.4 GB
+    - Gen0: 160,000
+    - Slightly higher memory and GC pressure than sync version
+    - Async overhead (Task/state machine allocations) outweighs benefits for sequential file processing
+
+## 7. ProcessorFasterV3Async2
+- **Change:** Uses `File.ReadLinesAsync()` with `await foreach` for asynchronous line enumeration.
+```csharp
+public async Task InitializeAsync2()
+{
+    var dataPath = "./Data";
+    foreach (var file in Directory.GetFiles(dataPath))
+    {
+        await foreach (var line in File.ReadLinesAsync(file))
+        {
+            if (line.StartsWith("Ticker")) continue; // skip header
+            // ...process line as before...
+        }
+    }
+}
+```
+- **Impact:**
+    - Mean: 5.028s (much slower than both sync and other async version)
+    - Allocated: 1.4 GB
+    - Gen0: 160,000
+    - High StdDev (0.4170s) indicates inconsistent performance
+    - Despite similar logic, much slower due to extra abstraction and iterator overhead in `IAsyncEnumerable`
+
 ---
 
-## Summary Table
+## Async Context and Observations
+- **Async can be useful** when you want to process multiple files in parallel, handle concurrent I/O, or keep UI/server threads responsive. In this benchmark, all processing is sequential, so async adds overhead without benefit.
+- **Key advantages of async:**
+    - Enables parallel/concurrent file processing (e.g., `Task.WhenAll`)
+    - Improves scalability in server or UI scenarios
+    - Frees up threads during I/O waits
+- **Surprising result:** The two async approaches look almost identical in code, but `StreamReader.ReadLineAsync()` is much faster than `File.ReadLinesAsync()` with `await foreach`. The latter introduces more abstraction and iterator overhead, resulting in a 3x slower execution.
+- **Lesson:** Not all async implementations are equal. Always benchmark real-world usage, especially when choosing between similar APIs.
+
+---
+
+## Updated Summary Table
 | Method                    | Mean    | Allocated | Gen0        | Gen1        | Gen2       |
 |-------------------------- |--------:|----------:|------------:|------------:|-----------:|
 | ProcessorOriginal         | 5.102 s |   4.58 GB | 445,000     | 236,000     | 16,000     |
@@ -136,6 +194,8 @@ while(reader.ReadLine() is { } line) {
 | ProcessorFaster           | 3.857 s |   2.75 GB | 240,000     | 204,000     | 15,000     |
 | ProcessorFasterV2         | 2.575 s |   2.34 GB | 223,000     | 187,000     | 32,000     |
 | ProcessorFasterV3         | 1.384 s |   1.05 GB | 120,000     | N/A         | N/A        |
+| ProcessorFasterV3Async    | 1.679 s |   1.4 GB  | 160,000     | N/A         | N/A        |
+| ProcessorFasterV3Async2   | 5.028 s |   1.4 GB  | 160,000     | N/A         | N/A        |
 
 ---
 
@@ -143,4 +203,5 @@ while(reader.ReadLine() is { } line) {
 - **ProcessorFaster** improved performance by reducing string allocations during parsing, not by changing aggregate storage.
 - **ProcessorFasterV2** achieved the best results by optimizing both parsing and aggregate storage.
 - **ProcessorOriginalImproved** did not affect the measured benchmark phase, so results are unchanged.
-- **ProcessorFasterV3** achieved breakthrough performance by eliminating file-to-memory loading, using streaming instead. This single change reduced allocations by 55% and execution time by 46% compared to V2.
+- **ProcessorFasterV3** achieved breakthrough performance by eliminating file-to-memory loading, using streaming instead.
+- **Async versions** show that async is not always faster for sequential file processing, but can be valuable for parallel/concurrent scenarios. The choice of async API can have a dramatic impact on performance.
