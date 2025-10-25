@@ -1,5 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
 using ProcessorStock;
 
 namespace Benchmarks;
@@ -67,6 +66,22 @@ public class ProcessorBenchmarks
 	{
 		// Improved version of ProcessorFaster with precomputed values
 		var processor = new ProcessorFasterV2();
+		processor.Initialize();
+		var result = new List<string>();
+
+		foreach (var stock in processor.Stocks)
+		{
+			result.Add($"{stock.Value.Min} {stock.Value.Max} {stock.Value.Average}");
+		}
+
+		return result;
+	}
+
+	[Benchmark]
+	public List<string> ProcessorFasterV3()
+	{
+		// Improved version of ProcessorFaster with reading in a streaming way
+		var processor = new ProcessorFasterV3();
 		processor.Initialize();
 		var result = new List<string>();
 

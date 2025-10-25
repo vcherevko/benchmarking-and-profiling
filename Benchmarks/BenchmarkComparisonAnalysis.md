@@ -1,6 +1,6 @@
 # Benchmark Comparison Analysis
 
-This document compares four implementations measured by BenchmarkDotNet. Each section explains the real changes made and their direct impact on performance and memory usage, with code examples for clarity.
+This document compares five implementations measured by BenchmarkDotNet. Each section explains the real changes made and their direct impact on performance and memory usage, with code examples for clarity.
 
 ## 1. ProcessorOriginal
 - **CSV Parsing:** Used `string.Split(',')` for every line, creating multiple string allocations per row.
@@ -100,6 +100,32 @@ stocks[name] = agg;
     - Improvement is due to both more efficient parsing and storing only aggregate values, not all trades
     - Gen2 collections increased (32,000), but this is not a major concern given overall improvements
 
+## 5. ProcessorFasterV3
+- **Change:** Switched from loading entire file into memory to using `StreamReader` for line-by-line reading.
+```csharp
+// V2: Load entire file into memory
+var content = File.ReadAllText(file);
+var lines = content.Split(Environment.NewLine);
+for (int i = 1; i < lines.Length; i++) {
+    var line = lines[i];
+    // process line
+}
+
+// V3: Stream line-by-line
+using var reader = new StreamReader(File.Open(file, FileMode.Open, FileAccess.Read));
+reader.ReadLine(); // skip header
+while(reader.ReadLine() is { } line) {
+    // process line
+}
+```
+- **Aggregate Calculation:** Same as V2 - calculates aggregates during parsing and stores tuples.
+- **Impact:**
+    - Massive reduction in memory usage (1.05 GB allocated, down from 2.34 GB)
+    - Gen0 collections cut in half (120,000 vs 223,000)
+    - Fastest mean time (1.384s, ~46% faster than V2)
+    - Lower StdDev (0.0735s) shows consistent performance
+    - No longer allocates memory for entire file content or string arrays from Split()
+
 ---
 
 ## Summary Table
@@ -109,10 +135,12 @@ stocks[name] = agg;
 | ProcessorOriginalImproved | 5.163 s |   4.58 GB | 445,000     | 236,000     | 16,000     |
 | ProcessorFaster           | 3.857 s |   2.75 GB | 240,000     | 204,000     | 15,000     |
 | ProcessorFasterV2         | 2.575 s |   2.34 GB | 223,000     | 187,000     | 32,000     |
+| ProcessorFasterV3         | 1.384 s |   1.05 GB | 120,000     | N/A         | N/A        |
 
 ---
 
 ## Key Takeaways
 - **ProcessorFaster** improved performance by reducing string allocations during parsing, not by changing aggregate storage.
 - **ProcessorFasterV2** achieved the best results by optimizing both parsing and aggregate storage.
-- **ProcessorOriginalImproved** did not affect the measured benchmark phase, so results are unchanged
+- **ProcessorOriginalImproved** did not affect the measured benchmark phase, so results are unchanged.
+- **ProcessorFasterV3** achieved breakthrough performance by eliminating file-to-memory loading, using streaming instead. This single change reduced allocations by 55% and execution time by 46% compared to V2.
