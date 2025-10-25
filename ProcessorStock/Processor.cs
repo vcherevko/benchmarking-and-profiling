@@ -6,8 +6,9 @@ public class Processor
 {
 	public Dictionary<string, Stock> Stocks { get; } = new();
 
-	public void Initialize(string dataPath = "Data")
+	public void Initialize()
 	{
+		var dataPath = "./Data";
 		foreach (var file in Directory.GetFiles(dataPath))
 		{
 			var content = File.ReadAllText(file);
@@ -34,6 +35,8 @@ public class Processor
 					Stocks[csv[0]].Trades.Add(trade);
 				}
 			}
+
+			Console.WriteLine($"Loaded {Stocks.Count} records.");
 		}
 	}
 

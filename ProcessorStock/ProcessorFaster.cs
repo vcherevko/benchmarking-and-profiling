@@ -6,8 +6,9 @@ public class ProcessorFaster
 {
 	public Dictionary<string, Stock> Stocks { get; } = new();
 
-	public void Initialize(string dataPath = "Data")
+	public void Initialize()
 	{
+		var dataPath = "./Data";
 		foreach (var file in Directory.GetFiles(dataPath))
 		{
 			var content = File.ReadAllText(file);
@@ -17,8 +18,13 @@ public class ProcessorFaster
 			for (int i = 1; i < lines.Length; i++)
 			{
 				var line = lines[i];
-				var csv = line.Split(',');
+				var isEmptyLine = string.IsNullOrWhiteSpace(line);
+				if (isEmptyLine)
+				{
+					continue;
+				}
 
+				//var csv = line.Split(',');
 				//if (csv.Length < 8) continue;
 				int startIndex = 0;
 				int endIndex = 0;
