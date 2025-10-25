@@ -6,7 +6,7 @@ public static class Program
 {
 	public static void Main()
 	{
-		var summary = BenchmarkRunner.Run<ProcessorBenchmarks>();
-		Console.WriteLine(summary);
+		// BenchmarkRunner.Run<ProcessorBenchmarks>();
+		BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run();
 	}
 }
