@@ -1,4 +1,5 @@
 using System.Globalization;
+using ProcessorStock.Models;
 
 namespace ProcessorStock;
 
@@ -14,7 +15,6 @@ public class ProcessorFaster
 			var content = File.ReadAllText(file);
 			var lines = content.Split(Environment.NewLine);
 
-			//foreach (var line in lines[1..]) // skip the first line (header)
 			for (int i = 1; i < lines.Length; i++)
 			{
 				var line = lines[i];
@@ -24,23 +24,25 @@ public class ProcessorFaster
 					continue;
 				}
 
-				//var csv = line.Split(',');
-				//if (csv.Length < 8) continue;
 				int startIndex = 0;
-				int endIndex = 0;
 				string name = string.Empty;
 				string value = string.Empty;
 
-				// we know the csv contains 8 columns
-				for (int column = 0; column < 8; column++)
+				// we know the csv contains 9 columns
+				for (int column = 0; column < 9; column++)
 				{
-					endIndex = line.IndexOf(',', startIndex);
+					var endIndex = line.IndexOf(',', startIndex);
 					if (column == 0) // the stock name
 					{
 						name = line[startIndex..endIndex];
 					}
-					else if (column == 7) // the value we want
+					else if (column == 8) // the value we want
 					{
+						if (endIndex == -1)
+						{
+							endIndex = line.Length;
+						}
+
 						value = line[startIndex..endIndex];
 					}
 
@@ -49,63 +51,18 @@ public class ProcessorFaster
 
 				// remove unused values from parsing
 				var trade = new Trade(DateTime.MinValue,
-					decimal.MinValue,
-					decimal.Parse(value, CultureInfo.InvariantCulture),
-					decimal.MinValue);
+					decimal.Zero,
+					decimal.Zero,
+					decimal.Parse(value, CultureInfo.InvariantCulture));
 
 				if (!Stocks.ContainsKey(name))
 				{
 					Stocks[name] = new Stock(name);
 				}
 
-				for (int a = 0; a < 10; a++)
-				{
-					Stocks[name].Trades.Add(trade);
-				}
+				Stocks[name].Trades.Add(trade);
 			}
 		}
-	}
-
-	public decimal Min(string ticker)
-	{
-		decimal min = decimal.MaxValue;
-
-		foreach (var trade in Stocks[ticker].Trades)
-		{
-			if (trade.Change < min)
-			{
-				min = trade.Change;
-			}
-		}
-
-		return min;
-	}
-
-	public decimal Max(string ticker)
-	{
-		decimal max = decimal.MinValue;
-
-		foreach (var trade in Stocks[ticker].Trades)
-		{
-			if (trade.Change > max)
-			{
-				max = trade.Change;
-			}
-		}
-
-		return max;
-	}
-
-	public decimal Average(string ticker)
-	{
-		decimal total = 0;
-
-		foreach (var trade in Stocks[ticker].Trades)
-		{
-			total += trade.Change;
-		}
-
-		return total / Stocks[ticker].Trades.Count;
 	}
 
 	public (decimal min, decimal max, decimal average) GetReport(string ticker)

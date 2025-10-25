@@ -21,6 +21,7 @@ class Program
 			Directory.CreateDirectory(outputPath);
 		}
 
+		var tickers = new[] { "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "JPM", "V", "WMT", "SKE", "QQW", "NJXE", "KJKLSJ", "PLMNO", "ZXCVB", "QWERTY", "ASDFG", "HJKLZ", "POIUY", "MNBVC" };
 		var random = new Random();
 		var baseDate = new DateTime(2024, 1, 1);
 
@@ -36,9 +37,8 @@ class Program
 			for (int recordIndex = 0; recordIndex < recordsPerFile; recordIndex++)
 			{
 				// Generate a random 4-byte array and convert to base64 for a unique ticker
-				var tickerBytes = new byte[4];
-				random.NextBytes(tickerBytes);
-				var ticker = Convert.ToBase64String(tickerBytes).Replace("=", "").Replace("+", "A").Replace("/", "B");
+				var tickerName = random.Next(tickers.Length);
+				var ticker = tickers[tickerName];
 				var date = baseDate.AddDays(recordIndex % 365);
 
 				var open = Math.Round((decimal)(random.NextDouble() * 300 + 100), 2);
@@ -50,8 +50,7 @@ class Program
 				var adjClose = close;
 				var change = Math.Round(close - open, 2);
 
-				sb.AppendLine(
-					$"{ticker},{date:yyyy-MM-dd},{open.ToString(CultureInfo.InvariantCulture)},{high.ToString(CultureInfo.InvariantCulture)},{low.ToString(CultureInfo.InvariantCulture)},{close.ToString(CultureInfo.InvariantCulture)},{volume},{adjClose.ToString(CultureInfo.InvariantCulture)},{change.ToString(CultureInfo.InvariantCulture)}");
+				sb.AppendLine($"{ticker},{date:yyyy-MM-dd},{open.ToString(CultureInfo.InvariantCulture)},{high.ToString(CultureInfo.InvariantCulture)},{low.ToString(CultureInfo.InvariantCulture)},{close.ToString(CultureInfo.InvariantCulture)},{volume},{adjClose.ToString(CultureInfo.InvariantCulture)},{change.ToString(CultureInfo.InvariantCulture)}");
 			}
 
 			File.WriteAllText(fileName, sb.ToString());

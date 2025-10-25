@@ -1,4 +1,5 @@
 using System.Globalization;
+using ProcessorStock.Models;
 
 namespace ProcessorStock;
 
@@ -30,13 +31,8 @@ public class Processor
 					Stocks[csv[0]] = new Stock(csv[0]);
 				}
 
-				for (int a = 0; a < 10; a++)
-				{
-					Stocks[csv[0]].Trades.Add(trade);
-				}
+				Stocks[csv[0]].Trades.Add(trade);
 			}
-
-			Console.WriteLine($"Loaded {Stocks.Count} records.");
 		}
 	}
 
@@ -106,37 +102,4 @@ public class Processor
 		decimal average = total / count;
 		return (min, max, average);
 	}
-}
-
-public class Stock
-{
-	public Stock(string name)
-	{
-		Name = name;
-	}
-
-	public string Name { get; set; }
-
-	public IList<Trade> Trades { get; } = new List<Trade>();
-
-	public decimal Min { get; set; } = decimal.MinValue;
-	public decimal Max { get; set; } = decimal.MaxValue;
-	public decimal Total { get; set; } = 0;
-	public decimal Average => Total / Trades.Count;
-}
-
-public class Trade
-{
-	public Trade(DateTime date, decimal volume, decimal price, decimal change)
-	{
-		Date = date;
-		Volume = volume;
-		Price = price;
-		Change = change;
-	}
-
-	public DateTime Date { get; set; }
-	public decimal Volume { get; set; }
-	public decimal Price { get; set; }
-	public decimal Change { get; set; }
 }
